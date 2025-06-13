@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "midi-json-parser": "^8.1.64"
+  }
+}

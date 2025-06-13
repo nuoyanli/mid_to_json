@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>MIDI 文件夹转简化 JSON（ZIP 下载）</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #f0f4f8;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      height: 100vh;
+      margin: 0;
+      padding-top: 60px;
+    }
+    .container {
+      background: #ffffff;
+      padding: 30px 40px;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+      max-width: 600px;
+      width: 100%;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      text-align: center;
+      color: #333;
+    }
+    #selectFolderBtn {
+      background-color: #4a90e2;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: block;
+      margin: 0 auto 20px auto;
+      transition: background-color 0.3s;
+    }
+    #selectFolderBtn:hover {
+      background-color: #357ab8;
+    }
+    ul#fileList {
+      list-style-type: none;
+      padding: 0;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    ul#fileList li {
+      margin-bottom: 10px;
+      background: #f7f9fc;
+      padding: 10px 14px;
+      border-left: 4px solid #4a90e2;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎵 MIDI 批量转简化 JSON（ZIP 下载）</h1>
+    <button id="selectFolderBtn">📁 选择文件夹</button>
+    <ul id="fileList"></ul>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.27/build/Midi.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script>
+    const selectFolderBtn = document.getElementById("selectFolderBtn");
+    const fileList = document.getElementById("fileList");
+
+    selectFolderBtn.onclick = async () => {
+      const dirHandle = await window.showDirectoryPicker();
+      const zip = new JSZip();
+      let processedCount = 0;
+
+      for await (const entry of dirHandle.values()) {
+        if (entry.kind === "file" && entry.name.endsWith(".mid")) {
+          const file = await entry.getFile();
+          const arrayBuffer = await file.arrayBuffer();
+          try {
+            const midi = new Midi(arrayBuffer);
+            const jsonData = midi.toJSON();
+
+            const meta = jsonData.header.meta?.filter(item => item.type === "marker") || [];
+            const metaList = meta.map(item => ({ text: item.text, ticks: item.ticks }));
+            const ppq = jsonData.header.ppq;
+            const bpm = jsonData.header.tempos?.[0]?.bpm || 120;
+            const name = jsonData.header.name || entry.name;
+            const tickTime = 60 / (bpm * ppq);
+
+            const result = {
+              name: name,
+              count: metaList.length,
+              chords: []
+            };
+
+            for (let i = 0; i < metaList.length; i++) {
+              const current = metaList[i];
+              const nextTicks = metaList[i + 1]?.ticks || current.ticks + ppq;
+              result.chords.push({
+                name: current.text,
+                time_start: current.ticks * tickTime,
+                time_end: nextTicks * tickTime
+              });
+            }
+
+            const jsonStr = JSON.stringify(result, null, 2);
+            const outputName = entry.name.replace(/\.mid$/, "_output.json");
+            zip.file(outputName, jsonStr);
+
+            const li = document.createElement("li");
+            li.textContent = `已添加：${outputName}`;
+            fileList.appendChild(li);
+            processedCount++;
+          } catch (err) {
+            console.error("解析失败:", entry.name, err);
+          }
+        }
+      }
+
+      if (processedCount > 0) {
+        const blob = await zip.generateAsync({ type: "blob" });
+        const zipUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = zipUrl;
+        a.download = "midi_json_batch.zip";
+        a.style.display = "none";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } else {
+        alert("未找到任何 MIDI 文件或处理失败。");
+      }
+    };
+  </script>
+</body>
+</html>
