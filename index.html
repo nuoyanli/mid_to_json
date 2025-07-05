@@ -106,8 +106,8 @@
               const nextTicks = metaList[i + 1]?.ticks || current.ticks + ppq;
               result.chords.push({
                 name: current.text,
-                time_start: current.ticks * tickTime,
-                time_end: nextTicks * tickTime
+                time_start: Math.round(current.ticks * tickTime * 1000) / 1000,
+                time_end: Math.round(nextTicks * tickTime * 1000) / 1000
               });
             }
 
@@ -171,8 +171,8 @@
           const nextTicks = metaList[i + 1]?.ticks || current.ticks + ppq;
           result.chords.push({
             name: current.text,
-            time_start: current.ticks * tickTime,
-            time_end: nextTicks * tickTime
+            time_start: Math.round(current.ticks * tickTime * 1000) / 1000,
+            time_end: Math.round(nextTicks * tickTime * 1000) / 1000
           });
         }
 
