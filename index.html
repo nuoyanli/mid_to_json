@@ -96,7 +96,7 @@
 
             const result = {
               name: name,
-              audio_name: entry.name,
+              audio_name: entry.name.replace(/\.mid$/i, ""),
               count: metaList.length,
               chords: []
             };
@@ -161,7 +161,7 @@
 
         const result = {
           name: name,
-          audio_name: file.name,
+          audio_name: file.name.replace(/\.mid$/i, ""),
           count: metaList.length,
           chords: []
         };
