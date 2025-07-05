@@ -112,7 +112,7 @@
             }
 
             const jsonStr = JSON.stringify(result, null, 2);
-            const outputName = entry.name.replace(/\.mid$/, "_output.json");
+            const outputName = entry.name.replace(/\.mid$/, ".json");
             zip.file(outputName, jsonStr);
 
             const li = document.createElement("li");
@@ -182,7 +182,7 @@
 
         const a = document.createElement("a");
         a.href = url;
-        a.download = file.name.replace(/\.mid$/, "_output.json");
+        a.download = file.name.replace(/\.mid$/, ".json");
         a.style.display = "none";
         document.body.appendChild(a);
         a.click();
