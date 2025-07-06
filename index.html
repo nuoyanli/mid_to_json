@@ -67,12 +67,22 @@
     <ul id="fileList"></ul>
   </div>
 
+  <script src="decimal.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.27/build/Midi.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script>
     const selectFolderBtn = document.getElementById("selectFolderBtn");
     const selectSingleBtn = document.getElementById("selectSingleBtn");
     const fileList = document.getElementById("fileList");
+
+    function formatTimeDecimal(seconds) {
+      seconds = Decimal.max(0, new Decimal(seconds));
+      const h = seconds.div(3600).floor();
+      const m = seconds.mod(3600).div(60).floor();
+      const s = seconds.mod(60).floor();
+      const ms = seconds.minus(seconds.floor()).times(1000).toDecimalPlaces(0).toString().padStart(3, '0');
+      return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ms}`;
+    }
 
     selectFolderBtn.onclick = async () => {
       const dirHandle = await window.showDirectoryPicker();
@@ -92,7 +102,7 @@
             const ppq = jsonData.header.ppq;
             const bpm = jsonData.header.tempos?.[0]?.bpm || 120;
             const name = jsonData.header.name || entry.name;
-            const tickTime = 60 / (bpm * ppq);
+            const tickTime = new Decimal(60).div(bpm).div(ppq);
 
             const result = {
               name: name,
@@ -103,11 +113,18 @@
 
             for (let i = 0; i < metaList.length; i++) {
               const current = metaList[i];
-              const nextTicks = metaList[i + 1]?.ticks || current.ticks + ppq;
+              let nextTicks;
+              if (i < metaList.length - 1) {
+                nextTicks = metaList[i + 1].ticks;
+              } else {
+                nextTicks = midi.durationTicks;
+              }
+              const timeStart = new Decimal(current.ticks).times(tickTime);
+              const timeEnd = new Decimal(nextTicks).times(tickTime);
               result.chords.push({
                 name: current.text,
-                time_start: Math.round(current.ticks * tickTime * 1000) / 1000,
-                time_end: Math.round(nextTicks * tickTime * 1000) / 1000
+                time_start: formatTimeDecimal(timeStart),
+                time_end: formatTimeDecimal(timeEnd)
               });
             }
 
@@ -157,7 +174,7 @@
         const ppq = jsonData.header.ppq;
         const bpm = jsonData.header.tempos?.[0]?.bpm || 120;
         const name = jsonData.header.name || file.name;
-        const tickTime = 60 / (bpm * ppq);
+        const tickTime = new Decimal(60).div(bpm).div(ppq);
 
         const result = {
           name: name,
@@ -168,11 +185,18 @@
 
         for (let i = 0; i < metaList.length; i++) {
           const current = metaList[i];
-          const nextTicks = metaList[i + 1]?.ticks || current.ticks + ppq;
+          let nextTicks;
+          if (i < metaList.length - 1) {
+            nextTicks = metaList[i + 1].ticks;
+          } else {
+            nextTicks = midi.durationTicks;
+          }
+          const timeStart = new Decimal(current.ticks).times(tickTime);
+          const timeEnd = new Decimal(nextTicks).times(tickTime);
           result.chords.push({
             name: current.text,
-            time_start: Math.round(current.ticks * tickTime * 1000) / 1000,
-            time_end: Math.round(nextTicks * tickTime * 1000) / 1000
+            time_start: formatTimeDecimal(timeStart),
+            time_end: formatTimeDecimal(timeEnd)
           });
         }
 
